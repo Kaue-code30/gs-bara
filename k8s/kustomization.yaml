@@ -15,7 +15,7 @@ resources:
 images:
   - name: store-api-image
     newName: 175601742104.dkr.ecr.us-east-1.amazonaws.com/store-api
-    newTag: "1.0"
+    newTag: "2.0"
   - name: store-worker-image
     newName: 175601742104.dkr.ecr.us-east-1.amazonaws.com/store-worker
     newTag: "1.0"
