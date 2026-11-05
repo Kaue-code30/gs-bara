@@ -37,10 +37,12 @@ if ($LASTEXITCODE -ne 0) {
 
 $deadline = (Get-Date).AddMinutes(12)
 do {
-    $sync = (kubectl get application fiap-store -n argocd `
-        -o jsonpath='{.status.sync.status}' 2>$null).Trim()
-    $health = (kubectl get application fiap-store -n argocd `
-        -o jsonpath='{.status.health.status}' 2>$null).Trim()
+    [string]$sync = kubectl get application fiap-store -n argocd `
+        -o jsonpath='{.status.sync.status}' 2>$null
+    [string]$health = kubectl get application fiap-store -n argocd `
+        -o jsonpath='{.status.health.status}' 2>$null
+    $sync = $sync.Trim()
+    $health = $health.Trim()
     Write-Host "Argo CD: sync=$sync health=$health"
     if ($sync -eq "Synced" -and $health -eq "Healthy") {
         break
