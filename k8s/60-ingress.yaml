@@ -6,7 +6,7 @@ metadata:
   labels:
     app: store-ingress
   annotations:
-    fiap.io/public-host: STORE_HOSTNAME
+    fiap.io/public-host: ac64e6afe433d48e78f9645387cfe0f2-319265814.us-east-1.elb.amazonaws.com
     kubernetes.io/ingress.class: traefik
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
@@ -15,10 +15,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - STORE_HOSTNAME
+        - ac64e6afe433d48e78f9645387cfe0f2-319265814.us-east-1.elb.amazonaws.com
       secretName: store-tls
   rules:
-    - host: STORE_HOSTNAME
+    - host: ac64e6afe433d48e78f9645387cfe0f2-319265814.us-east-1.elb.amazonaws.com
       http:
         paths:
           - path: /api

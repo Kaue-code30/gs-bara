@@ -8,7 +8,7 @@ metadata:
 
 iam:
   withOIDC: false
-  serviceRoleARN: arn:aws:iam::AWS_ACCOUNT_ID:role/LabRole
+  serviceRoleARN: arn:aws:iam::175601742104:role/LabRole
 
 availabilityZones:
   - us-east-1a
@@ -36,4 +36,4 @@ managedNodeGroups:
     privateNetworking: false
     volumeSize: 20
     iam:
-      instanceRoleARN: arn:aws:iam::AWS_ACCOUNT_ID:role/LabRole
+      instanceRoleARN: arn:aws:iam::175601742104:role/LabRole

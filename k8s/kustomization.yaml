@@ -14,11 +14,11 @@ resources:
 
 images:
   - name: store-api-image
-    newName: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/store-api
+    newName: 175601742104.dkr.ecr.us-east-1.amazonaws.com/store-api
     newTag: "1.0"
   - name: store-worker-image
-    newName: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/store-worker
+    newName: 175601742104.dkr.ecr.us-east-1.amazonaws.com/store-worker
     newTag: "1.0"
   - name: store-front-image
-    newName: AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/store-front
+    newName: 175601742104.dkr.ecr.us-east-1.amazonaws.com/store-front
     newTag: "1.0"

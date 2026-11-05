@@ -13,8 +13,12 @@ if ($LASTEXITCODE -ne 0 -or $accountId -notmatch '^\d{12}$') {
 $registry = "$accountId.dkr.ecr.$Region.amazonaws.com"
 
 foreach ($repository in @("store-api", "store-worker", "store-front")) {
+    $currentErrorPreference = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
     aws ecr describe-repositories --repository-names $repository --region $Region *> $null
-    if ($LASTEXITCODE -ne 0) {
+    $describeExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $currentErrorPreference
+    if ($describeExitCode -ne 0) {
         aws ecr create-repository `
             --repository-name $repository `
             --region $Region `

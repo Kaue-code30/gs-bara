@@ -15,9 +15,13 @@ kubectl apply -f (Join-Path $repoRoot "k8s\00-namespaces.yaml") | Out-Null
 
 if (-not $DatabasePassword) {
     foreach ($namespace in @("store-data", "store-prod")) {
+        $currentErrorPreference = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
         $encoded = kubectl get secret store-db-credentials -n $namespace `
             -o jsonpath='{.data.password}' 2>$null
-        if ($LASTEXITCODE -eq 0 -and $encoded) {
+        $getSecretExitCode = $LASTEXITCODE
+        $ErrorActionPreference = $currentErrorPreference
+        if ($getSecretExitCode -eq 0 -and $encoded) {
             $DatabasePassword = [System.Text.Encoding]::UTF8.GetString(
                 [System.Convert]::FromBase64String($encoded)
             )
@@ -52,12 +56,16 @@ $certificatePath = Join-Path $temporaryDirectory "tls.crt"
 $privateKeyPath = Join-Path $temporaryDirectory "tls.key"
 
 try {
+    $currentErrorPreference = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
     openssl req -x509 -nodes -newkey rsa:2048 -sha256 -days 30 `
         -keyout $privateKeyPath `
         -out $certificatePath `
-        -subj "/CN=$Hostname" `
+        -subj "/CN=fiap-store" `
         -addext "subjectAltName=DNS:$Hostname" 2>$null
-    if ($LASTEXITCODE -ne 0) {
+    $opensslExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $currentErrorPreference
+    if ($opensslExitCode -ne 0) {
         throw "Falha ao gerar o certificado TLS."
     }
 
