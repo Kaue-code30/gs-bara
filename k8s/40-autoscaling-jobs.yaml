@@ -1,0 +1,213 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: store-api
+  namespace: store-prod
+  labels:
+    app: store-api
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: store-api
+  minReplicas: 3
+  maxReplicas: 6
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 120
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: store-api
+  namespace: store-prod
+  labels:
+    app: store-api
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: store-api
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: store-worker
+  namespace: store-prod
+  labels:
+    app: store-worker
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  scaleTargetRef:
+    name: store-worker
+  pollingInterval: 5
+  cooldownPeriod: 30
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  triggers:
+    - type: redis
+      metadata:
+        address: store-redis.store-data.svc.cluster.local:6379
+        listName: pedidos
+        listLength: "10"
+        activationListLength: "0"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  namespace: store-prod
+  labels:
+    app: db-migrate
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: db-migrate
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: db-migrate
+          image: store-api-image
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "app.migrate"]
+          envFrom:
+            - configMapRef:
+                name: store-api-config
+          env:
+            - name: DB_PASSWORD_FILE
+              value: /var/run/secrets/store-db/password
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: db-password
+              mountPath: /var/run/secrets/store-db
+              readOnly: true
+      volumes:
+        - name: db-password
+          secret:
+            secretName: store-db-credentials
+            items:
+              - key: password
+                path: password
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: store-report
+  namespace: store-prod
+  labels:
+    app: store-report
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 45
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      labels:
+        app: store-report
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: store-report
+        spec:
+          restartPolicy: OnFailure
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: store-report
+              image: store-worker-image
+              imagePullPolicy: IfNotPresent
+              command: ["python", "-m", "worker.relatorio"]
+              envFrom:
+                - configMapRef:
+                    name: store-api-config
+              env:
+                - name: DB_PASSWORD_FILE
+                  value: /var/run/secrets/store-db/password
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 250m
+                  memory: 256Mi
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 10001
+                runAsGroup: 10001
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: db-password
+                  mountPath: /var/run/secrets/store-db
+                  readOnly: true
+          volumes:
+            - name: db-password
+              secret:
+                secretName: store-db-credentials
+                items:
+                  - key: password
+                    path: password

@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.*
+.aws/
+.tools/
+.trivycache/
+*.pem
+*.key
+*.crt
+kubeconfig*
+credentials
+secret*.yaml
+*-secret.yaml

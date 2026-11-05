@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: store-ingress
+  namespace: store-prod
+  labels:
+    app: store-ingress
+  annotations:
+    fiap.io/public-host: STORE_HOSTNAME
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - STORE_HOSTNAME
+      secretName: store-tls
+  rules:
+    - host: STORE_HOSTNAME
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: store-api
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: store-front
+                port:
+                  number: 80

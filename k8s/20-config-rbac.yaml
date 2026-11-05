@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: store-api-config
+  namespace: store-prod
+  labels:
+    app: store-api
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+data:
+  DB_HOST: store-db.store-data.svc.cluster.local
+  DB_PORT: "5432"
+  DB_NAME: fiapstore
+  DB_USER: fiapstore
+  REDIS_HOST: store-redis.store-data.svc.cluster.local
+  REDIS_PORT: "6379"
+  QUEUE_NAME: pedidos
+  APP_ENV: producao
+  PROCESS_SECONDS: "2"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: store-prod-quota
+  namespace: store-prod
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 4Gi
+    limits.cpu: "8"
+    limits.memory: 8Gi
+    pods: "30"
+    services: "10"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: store-prod-limits
+  namespace: store-prod
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi
+      default:
+        cpu: 250m
+        memory: 256Mi
+      max:
+        cpu: "1"
+        memory: 1Gi
+      min:
+        cpu: 10m
+        memory: 16Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: store-api
+  namespace: store-prod
+  labels:
+    app: store-api
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: store-api-node-reader
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: store-api-node-reader
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: store-api-node-reader
+subjects:
+  - kind: ServiceAccount
+    name: store-api
+    namespace: store-prod
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fiap-devs-readonly
+  namespace: store-prod
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fiap-devs-readonly
+  namespace: store-prod
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fiap-devs-readonly
+subjects:
+  - kind: Group
+    name: fiap:devs
+    apiGroup: rbac.authorization.k8s.io
