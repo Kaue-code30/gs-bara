@@ -29,15 +29,23 @@ foreach ($entry in $images.GetEnumerator()) {
     $tablePath = Join-Path $outputDirectory "$($entry.Key).txt"
     $jsonPath = Join-Path $outputDirectory "$($entry.Key).json"
 
-    trivy image --scanners vuln --severity HIGH,CRITICAL `
+    $currentErrorPreference = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    trivy image --quiet --skip-java-db-update --scanners vuln --severity HIGH,CRITICAL `
         --format table --output $tablePath $entry.Value
-    if ($LASTEXITCODE -ne 0) {
+    $tableExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $currentErrorPreference
+    if ($tableExitCode -ne 0) {
         throw "Falha no scan da imagem $($entry.Value)."
     }
 
-    trivy image --scanners vuln --severity HIGH,CRITICAL `
+    $currentErrorPreference = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    trivy image --quiet --skip-java-db-update --scanners vuln --severity HIGH,CRITICAL `
         --format json --output $jsonPath $entry.Value
-    if ($LASTEXITCODE -ne 0) {
+    $jsonExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $currentErrorPreference
+    if ($jsonExitCode -ne 0) {
         throw "Falha no scan JSON da imagem $($entry.Value)."
     }
 }
